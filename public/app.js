@@ -12,38 +12,75 @@ const portsEl = $("#ports");
 let lastResults = [];
 
 function parseIPs(text) {
-  return text
-    .split(/\r?\n/)
-    .map(x => x.trim())
-    .filter(x => x.length > 0);
+  return text.split(/\r?\n/).map(x => x.trim()).filter(x => x.length > 0);
 }
 
 function renderResults(rows) {
   resultsEl.innerHTML = "";
   let real = 0, fake = 0;
 
+  // Header row
   const header = document.createElement("div");
-  header.className = "item";
+  header.className = "item header";
   header.innerHTML = `
-    <div class="code small"><strong>Input</strong></div>
-    <div class="small"><strong>Status</strong></div>
-    <div class="small"><strong>HTTP</strong></div>
-    <div class="small"><strong>Proxy / Info</strong></div>
+    <div>
+      <span class="code small"><strong>Input</strong></span>
+      <span class="small"><strong>Status</strong></span>
+    </div>
+    <div>
+      <span class="small"><strong>HTTP</strong></span>
+      <span class="small"><strong>Info</strong></span>
+    </div>
+    <div>
+      <span class="small"><strong>Ports</strong></span>
+      <span class="small"><strong>Origin</strong></span>
+    </div>
+    <div>
+      <span class="small"><strong>Fake Source</strong></span>
+    </div>
   `;
   resultsEl.appendChild(header);
 
   rows.forEach(r => {
     if (r.status === "real") real++; else fake++;
+
     const d = document.createElement("div");
     d.className = "item";
+
+    // Format fake source as styled button with tooltip
+    let fakeSourceDisplay = "-";
+    if (r.status === "fake" && r.fake_source_url) {
+      const siteName = getSiteNameFromUrl(r.fake_source_url);
+      fakeSourceDisplay = `
+        <a href="${escapeHtml(r.fake_source_url)}" 
+           target="_blank" 
+           class="fake-source-btn" 
+           title="${escapeHtml(r.fake_source_url)}">
+          🌐 ${escapeHtml(siteName)}
+        </a>`;
+    }
+
+    // Format info section: latency + error
+    const infoContent = `
+      ${r.elapsed_ms ? `<span class="latency">${r.elapsed_ms}ms</span>` : ""}
+      ${r.error ? `<span class="error">⚠️ ${escapeHtml(r.error.slice(0,80))}</span>` : ""}
+    `;
+
     d.innerHTML = `
-      <div class="code">${escapeHtml(r.input || "")}</div>
-      <div><span class="status badge ${r.status}">${r.status.toUpperCase()}</span></div>
-      <div class="small">${r.http_status ?? "-"}</div>
-      <div class="small code" title="${r.final_url || ""}">
-        ${escapeHtml(r.normalized_proxy || "")}
-        ${r.elapsed_ms ? ` • ${r.elapsed_ms}ms` : "" }
-        ${r.error ? ` • err: ${escapeHtml(r.error.slice(0,120))}` : ""}
+      <div>
+        <span class="code">${escapeHtml(r.input || "")}</span>
+        <span><span class="status badge ${r.status}">${r.status.toUpperCase()}</span></span>
+      </div>
+      <div>
+        <span class="small">${r.http_status ?? "-"}</span>
+        <span class="info">${infoContent}</span>
+      </div>
+      <div>
+        <span class="small code">${r.ports_tried ? r.ports_tried.join(", ") : "-"}</span>
+        <span class="small">${escapeHtml(r.source || "-")}</span>
+      </div>
+      <div>
+        <span class="small">${fakeSourceDisplay}</span>
       </div>
     `;
     resultsEl.appendChild(d);
@@ -53,19 +90,37 @@ function renderResults(rows) {
   exportBtn.disabled = rows.length === 0;
 }
 
+function getSiteNameFromUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    if (hostname.includes("proxyscrape")) return "ProxyScrape";
+    if (hostname.includes("free-proxy-list")) return "Free Proxy List";
+    if (hostname.includes("proxynova")) return "ProxyNova";
+    if (hostname.includes("hidemy.name")) return "HideMy.name";
+    if (hostname.includes("spys.one")) return "Spys.one";
+    return hostname.replace("www.", "").split(".")[0];
+  } catch (e) {
+    return "Unknown Source";
+  }
+}
+
 function escapeHtml(s) {
-  return String(s).replace(/[&<>"']/g, (m) => ({
-    "&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"
+  if (typeof s !== "string") return String(s);
+  return s.replace(/[&<>"']/g, m => ({
+    "&": "&amp;",
+    "<": "<",
+    ">": ">",
+    "\"": "&quot;",
+    "'": "&#39;"
   }[m]));
 }
 
 checkBtn.addEventListener("click", async () => {
   const ips = parseIPs(ipInput.value);
-  if (ips.length === 0) {
-    alert("Please paste IPs (IP or IP:PORT or user:pass@IP:PORT)");
+  if (!ips.length) {
+    alert("Please paste IPs");
     return;
   }
-
   resultsEl.innerHTML = "";
   statsEl.textContent = "Checking…";
 
@@ -83,7 +138,7 @@ checkBtn.addEventListener("click", async () => {
     lastResults = data;
     renderResults(data);
   } catch (e) {
-    statsEl.textContent = "Error contacting server. Is DOT 5 running?";
+    statsEl.textContent = "Error contacting server";
     console.error(e);
   }
 });
@@ -105,4 +160,4 @@ exportBtn.addEventListener("click", async () => {
   a.click();
   a.remove();
   URL.revokeObjectURL(url);
-}); 
+});

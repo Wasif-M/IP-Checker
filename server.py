@@ -1,41 +1,36 @@
 import csv
 import io
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, FileResponse, PlainTextResponse
+from fastapi.responses import JSONResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from checker import check_proxies_bulk
 
 app = FastAPI(title="DOT 5 - Advanced Bulk IP Checker")
 
-# Serve the frontend - mount at /static to avoid conflicts with API
+# Serve the frontend
 app.mount("/static", StaticFiles(directory="public"), name="static")
 
-TARGET_URL = "http://bathrooms-renovation.xyz/"
-
+# Multiple targets
+TARGET_URLS = [
+    "http://solarpaneldeals.org/",
+    "http://kitchneremolding.xyz/",
+    "http://www.bestcarinsuranceplans.xyz/"
+]
 
 @app.get("/")
 async def root():
-    """Serve the main HTML page"""
     with open("public/index.html", "r", encoding="utf-8") as f:
-        content = f.read()
-    return PlainTextResponse(content, media_type="text/html")
-
+        return PlainTextResponse(f.read(), media_type="text/html")
 
 @app.get("/style.css")
 async def get_css():
-    """Serve the CSS file"""
     with open("public/style.css", "r", encoding="utf-8") as f:
-        content = f.read()
-    return PlainTextResponse(content, media_type="text/css")
-
+        return PlainTextResponse(f.read(), media_type="text/css")
 
 @app.get("/app.js")
 async def get_js():
-    """Serve the JavaScript file"""
     with open("public/app.js", "r", encoding="utf-8") as f:
-        content = f.read()
-    return PlainTextResponse(content, media_type="application/javascript")
-
+        return PlainTextResponse(f.read(), media_type="application/javascript")
 
 @app.post("/api/check-bulk")
 async def api_check_bulk(req: Request):
@@ -47,22 +42,17 @@ async def api_check_bulk(req: Request):
 
     results = await check_proxies_bulk(
         raw_ips=raw_ips,
-        target_url=TARGET_URL,
+        target_urls=TARGET_URLS,
         timeout=timeout,
         max_workers=max_workers,
         try_ports=try_ports,
     )
     return JSONResponse(results)
 
-
 @app.post("/api/export-csv")
 async def api_export_csv(req: Request):
-    """
-    Accepts a JSON body { "results": [...] } and returns CSV.
-    """
     payload = await req.json()
     rows = payload.get("results", [])
-    # Build CSV
     output = io.StringIO()
     writer = csv.DictWriter(
         output,
@@ -74,17 +64,17 @@ async def api_export_csv(req: Request):
             "elapsed_ms",
             "final_url",
             "error",
+            "source",
+            "ports_tried",
+            "fake_source_url",  # <-- Added
         ],
         extrasaction="ignore",
     )
     writer.writeheader()
     for r in rows:
         writer.writerow(r)
-    csv_bytes = output.getvalue().encode("utf-8")
     return PlainTextResponse(
-        content=csv_bytes.decode("utf-8"),
+        content=output.getvalue(),
         media_type="text/csv; charset=utf-8",
-        headers={
-            "Content-Disposition": "attachment; filename=dot5_results.csv"
-        },
-    ) 
+        headers={"Content-Disposition": "attachment; filename=dot5_results.csv"},
+    )
