@@ -10,7 +10,7 @@ app = FastAPI(title="DOT 5 - Advanced Bulk IP Checker")
 # Serve the frontend
 app.mount("/static", StaticFiles(directory="public"), name="static")
 
-# Multiple targets
+# Multiple targets — now exported for frontend use
 TARGET_URLS = [
     "http://solarpaneldeals.org/",
     "http://kitchneremolding.xyz/",
@@ -66,7 +66,8 @@ async def api_export_csv(req: Request):
             "error",
             "source",
             "ports_tried",
-            "fake_source_url",  # <-- Added
+            "fake_source_url",
+            "real_source_url",  # ✅ NEW
         ],
         extrasaction="ignore",
     )

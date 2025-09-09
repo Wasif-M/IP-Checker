@@ -276,4 +276,23 @@ button.ghost {
   .item > div:nth-child(2) {
     flex-direction: column;
   }
+  .real-source-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: #133a20;
+    color: #7bf2a2;
+    border: 1px solid #2d9157;
+    border-radius: 6px;
+    padding: 4px 8px;
+    font-size: 12px;
+    text-decoration: none;
+    font-weight: 500;
+    transition: background 0.2s;
+  }
+  
+  .real-source-btn:hover {
+    background: #1a4f2c;
+    color: #a0ffc0;
+  }
 }

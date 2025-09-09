@@ -36,6 +36,7 @@ function renderResults(rows) {
       <span class="small"><strong>Origin</strong></span>
     </div>
     <div>
+      <span class="small"><strong>Real Source</strong></span>
       <span class="small"><strong>Fake Source</strong></span>
     </div>
   `;
@@ -60,6 +61,19 @@ function renderResults(rows) {
         </a>`;
     }
 
+    // Format REAL source as styled button
+    let realSourceDisplay = "-";
+    if (r.status === "real" && r.real_source_url) {
+      const siteName = getSiteNameFromUrl(r.real_source_url);
+      realSourceDisplay = `
+        <a href="${escapeHtml(r.real_source_url)}" 
+           target="_blank" 
+           class="real-source-btn" 
+           title="${escapeHtml(r.real_source_url)}">
+          ✅ ${escapeHtml(siteName)}
+        </a>`;
+    }
+
     // Format info section: latency + error
     const infoContent = `
       ${r.elapsed_ms ? `<span class="latency">${r.elapsed_ms}ms</span>` : ""}
@@ -80,6 +94,7 @@ function renderResults(rows) {
         <span class="small">${escapeHtml(r.source || "-")}</span>
       </div>
       <div>
+        <span class="small">${realSourceDisplay}</span>
         <span class="small">${fakeSourceDisplay}</span>
       </div>
     `;
@@ -98,6 +113,9 @@ function getSiteNameFromUrl(url) {
     if (hostname.includes("proxynova")) return "ProxyNova";
     if (hostname.includes("hidemy.name")) return "HideMy.name";
     if (hostname.includes("spys.one")) return "Spys.one";
+    if (hostname.includes("solarpaneldeals")) return "SolarPanelDeals";
+    if (hostname.includes("kitchneremolding")) return "KitchnerRemodeling";
+    if (hostname.includes("bestcarinsuranceplans")) return "CarInsurancePlans";
     return hostname.replace("www.", "").split(".")[0];
   } catch (e) {
     return "Unknown Source";

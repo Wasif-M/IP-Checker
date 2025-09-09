@@ -1,6 +1,6 @@
 import re
 import time
-import random  # <-- ADD THIS
+import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import requests
 import asyncio
@@ -90,6 +90,7 @@ def try_request(target_url: str, proxy_url: str, timeout: float, input_label: st
                 "final_url": r.url,
                 "error": "",
                 "source": source,
+                "validated_on": target_url  # ✅ NEW: Record which target succeeded
             }
     except Exception as e:
         head_error = str(e)
@@ -117,6 +118,7 @@ def try_request(target_url: str, proxy_url: str, timeout: float, input_label: st
                 "final_url": r.url,
                 "error": "",
                 "source": source,
+                "validated_on": target_url  # ✅ NEW
             }
         else:
             return {
@@ -128,6 +130,7 @@ def try_request(target_url: str, proxy_url: str, timeout: float, input_label: st
                 "final_url": r.url,
                 "error": "",
                 "source": source,
+                "validated_on": None
             }
     except Exception as e:
         return {
@@ -139,6 +142,7 @@ def try_request(target_url: str, proxy_url: str, timeout: float, input_label: st
             "final_url": "",
             "error": head_error or str(e),
             "source": source,
+            "validated_on": None
         }
 
 
@@ -152,7 +156,8 @@ def check_one(input_label: str, proxy_url: str, target_urls: List[str], timeout:
             return {
                 **res,
                 "ports_tried": ports_tried,
-                "fake_source_url": ""  # Real IPs don't need fake source
+                "fake_source_url": "",  # Real IPs don't need fake source
+                "real_source_url": res["validated_on"]  # ✅ NEW: Pass up the successful URL
             }
     # If all failed, assign fake source if generated
     fake_source = ""
@@ -162,7 +167,8 @@ def check_one(input_label: str, proxy_url: str, target_urls: List[str], timeout:
     return {
         **last_result,
         "ports_tried": ports_tried,
-        "fake_source_url": fake_source
+        "fake_source_url": fake_source,
+        "real_source_url": None  # Real IPs only set this if they succeed
     }
 
 
